@@ -3,16 +3,16 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: lekix <lekix@student.42.fr>                +#+  +:+       +#+         #
+#    By: kipouliq <kipouliq@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/12/13 16:29:27 by kipouliq          #+#    #+#              #
-#    Updated: 2026/04/07 21:39:42 by lekix            ###   ########.fr        #
+#    Updated: 2026/04/14 15:20:53 by kipouliq         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = HashMap
 
-CXX = c++
+CXX = c++ -std=c++17
 
 FLAGS = -Wall -Wextra -Werror -g
 
@@ -35,7 +35,7 @@ clean:
 	rm -rf ./*.o
 
 fclean:	clean
-	rm $(NAME)
+	rm -f $(NAME)
 
 re: fclean
 	make all
