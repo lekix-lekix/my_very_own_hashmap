@@ -6,7 +6,7 @@
 /*   By: kipouliq <kipouliq@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 21:33:39 by lekix             #+#    #+#             */
-/*   Updated: 2026/04/14 16:59:00 by kipouliq         ###   ########.fr       */
+/*   Updated: 2026/04/15 17:14:38 by kipouliq         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,10 +29,12 @@ std::string gen_random(const int len) {
 
 int main ()
 {
-    HashMap<int> map(20);
+    int size = 1000;
+    
+    HashMap<int> map(size);
     std::vector<std::string> keys;
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10000; i++)
     {
         std::string key = gen_random(10);
         keys.push_back(key);
@@ -57,4 +59,9 @@ int main ()
     //     std::cerr << excpt.what();
     // }
     map["coucou"] = 32;
+    std::cout << map["coucou"] << std::endl;
+    std::cout << "========\n";
+    std::cout << map[keys[99998]] << std::endl;
+    map.erase(keys[5]);
+    std::cout << map["coucou"] << std::endl;
 }

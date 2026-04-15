@@ -6,7 +6,7 @@
 /*   By: kipouliq <kipouliq@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/06 11:19:29 by lekix             #+#    #+#             */
-/*   Updated: 2026/04/14 17:18:45 by kipouliq         ###   ########.fr       */
+/*   Updated: 2026/04/15 17:04:14 by kipouliq         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,10 +36,10 @@ class HashMap
         uint32_t                                        size;
         
         uint32_t                                        hash(std::string key);
-        T &                                             store(std::string key, T value);
-        T &                                             search(std::string key);
+        T &                                             store(std::string key);
+        Entry<T>*                                       search(std::string key);
         
-    public:
+        public:
         HashMap(void) {};
         ~HashMap(void) {};
         
@@ -47,7 +47,8 @@ class HashMap
         
         HashMap(int size);
         
-        void                            print(void);
+        void                                            erase(std::string key);
+        void                                            print(void);
         
     class KeyAlreadyExists : public std::exception
     {
@@ -76,40 +77,33 @@ uint32_t HashMap<T>::hash(std::string key)
 }
 
 template <typename T>
-T &HashMap<T>::store(std::string key, T value)
+Entry<T> *HashMap<T>::search(std::string key)
 {
     uint32_t                        index = this->hash(key) % this->size;
-    std::unique_ptr<Entry<T>>       new_node = std::make_unique<Entry<T>>(key, value);
     std::unique_ptr<Entry<T>>*      current = &buckets[index];
 
     while (*current)
     {
         if ((*current)->key == key)
-        {
-            (*current)->value = value;
-            return ((*current)->value);
-        }
+            return ((*current).get());
         current = &(*current)->next;
     }
-    *current = std::move(new_node);
-    return ((*current)->value);
+    return (nullptr);
 }
 
-// template <typename T>
-// T &HashMap<T>::search(std::string key)
-// {
-//     for (uint32_t i = 0; i < this->size; i++)
-//     {
-//         std::unique_ptr<Entry<T>>* current = &buckets[i];
-//         while (*current)
-//         {
-//             if ((*current)->key == key)
-//                 return ((*current)->value);
-//             current = &(*current)->next;
-//         }
-//     }
-//     return (nullptr);
-// }
+template <typename T>
+T &HashMap<T>::store(std::string key)
+{
+    Entry<T>* found = this->search(key);
+    
+    if (found)
+        return (found->value);
+
+    uint32_t index = this->hash(key) % this->size;
+    std::unique_ptr<Entry<T>>* lst_begin = &buckets[index];
+    *lst_begin = std::move(std::make_unique<Entry<T>>(key, 0));
+    return ((*lst_begin)->value);
+}
 
 template <typename T>
 void HashMap<T>::print(void)
@@ -123,6 +117,32 @@ void HashMap<T>::print(void)
             current = &(*current)->next;
         }
         std::cout << "empty\n"; 
+    }
+}
+
+template <typename T>
+void HashMap<T>::erase(std::string key)
+{
+    uint32_t                        index = this->hash(key) % this->size;
+    std::unique_ptr<Entry<T>>*      current = &this->buckets[index];
+    std::unique_ptr<Entry<T>>*      prev;
+
+    if ((*current)->key == key)
+    {
+        this->buckets[index] = std::move((*current)->next);
+        (*current).release();
+        return ;
+    }
+    while (*current)
+    {
+        if ((*current)->key == key)
+        {
+            (*prev)->next = std::move((*current)->next);
+            (*current).release();
+            return ;
+        }
+        prev = current;
+        current = &(*current)->next;
     }
 }
 
