@@ -6,7 +6,7 @@
 /*   By: kipouliq <kipouliq@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/06 11:19:29 by lekix             #+#    #+#             */
-/*   Updated: 2026/04/15 17:04:14 by kipouliq         ###   ########.fr       */
+/*   Updated: 2026/04/17 17:12:53 by kipouliq         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,22 +25,27 @@ struct Entry
     T                               value;
     std::unique_ptr<Entry<T>>       next;
 
-    Entry(std::string key, T value) : key(key), value(value) {}
-};
+    Entry(std::string key, T value) : key(key), value(value), next(nullptr) {}
+}; 
 
 template <typename T>
 class HashMap
 {
     private:
-        std::unique_ptr<std::unique_ptr<Entry<T>>[]>    buckets;
-        uint32_t                                        size;
+        std::unique_ptr<std::unique_ptr<Entry<T>>[]>    _buckets;
+        uint32_t                                        _size;
+        int                                             _stored = 0;
         
         uint32_t                                        hash(std::string key);
+        void                                            rehash(void);
+        bool                                            need_rehash(void);
+        
         T &                                             store(std::string key);
+        void                                            move_in_bucket(std::unique_ptr<Entry<T>>* node, std::unique_ptr<Entry<T>>* bucket);
         Entry<T>*                                       search(std::string key);
         
         public:
-        HashMap(void) {};
+        HashMap(void);
         ~HashMap(void) {};
         
         T &operator[](const std::string key);  // map["friend"]
@@ -58,10 +63,17 @@ class HashMap
 };
 
 template <typename T>
+HashMap<T>::HashMap()
+{
+    this->_size = 16;
+    this->_buckets = std::make_unique<std::unique_ptr<Entry<T>>[]>(16);
+}
+
+template <typename T>
 HashMap<T>::HashMap(int size)
 {
-    this->size = size;
-    this->buckets = std::make_unique<std::unique_ptr<Entry<T>>[]>(size);
+    this->_size = size;
+    this->_buckets = std::make_unique<std::unique_ptr<Entry<T>>[]>(size);
 }
 
 template <typename T>
@@ -73,44 +85,68 @@ uint32_t HashMap<T>::hash(std::string key)
         hash ^= c;
         hash *= FNV_PRIME;
     }
-    return (hash);
+    return hash;
 }
 
 template <typename T>
 Entry<T> *HashMap<T>::search(std::string key)
 {
-    uint32_t                        index = this->hash(key) % this->size;
-    std::unique_ptr<Entry<T>>*      current = &buckets[index];
+    uint32_t                        index = this->hash(key) % this->_size;
+    std::unique_ptr<Entry<T>>*      current = &_buckets[index];
+
+    if (key == "38")
+        std::cout << "////38 index = " << this->hash(key) % this->_size << "and size is " << this->_size << std::endl;
+    if (*current && key == "38")
+        std::cout << "current found\n";
 
     while (*current)
     {
         if ((*current)->key == key)
-            return ((*current).get());
+           return ((*current).get());
         current = &(*current)->next;
     }
-    return (nullptr);
+    return nullptr;
 }
 
 template <typename T>
 T &HashMap<T>::store(std::string key)
 {
-    Entry<T>* found = this->search(key);
-    
-    if (found)
-        return (found->value);
+    this->_stored += 1;
+    uint32_t index = this->hash(key) % this->_size;
+    std::unique_ptr<Entry<T>>* lst_begin = &_buckets[index];
+    Entry<T>* curr = lst_begin->get();
+    if (!curr)
+    {
+        *lst_begin = std::make_unique<Entry<T>>(key, T{});
+        return (*lst_begin)->value;
+    }
+    while (curr && curr->next && curr->next.get())
+        curr = curr->next.get();
+    curr->next = std::make_unique<Entry<T>>(key, T{});
+    return curr->next->value;
+}
 
-    uint32_t index = this->hash(key) % this->size;
-    std::unique_ptr<Entry<T>>* lst_begin = &buckets[index];
-    *lst_begin = std::move(std::make_unique<Entry<T>>(key, 0));
-    return ((*lst_begin)->value);
+template <typename T>
+void HashMap<T>::move_in_bucket(std::unique_ptr<Entry<T>>* node, std::unique_ptr<Entry<T>>* bucket)
+{
+    // uint32_t index = this->hash(node->get().key) % this->_size;
+    Entry<T>* curr = bucket->get();
+    if (!curr)
+    {
+        *bucket = std::move(*node);
+        return ;
+    }
+    while (curr && curr->next && curr->next.get())
+        curr = curr->next.get();
+    curr->next = std::move(*node);
 }
 
 template <typename T>
 void HashMap<T>::print(void)
 {
-    for (uint32_t i = 0; i < this->size; i++)
+    for (uint32_t i = 0; i < this->_size; i++)
     {
-        std::unique_ptr<Entry<T>>* current = &buckets[i];
+        std::unique_ptr<Entry<T>>* current = &_buckets[i];
         while (*current)
         {
             std::cout << "key = " << (*current)->key << " val = " << (*current)->value << " at idx " << i << std::endl;
@@ -118,19 +154,19 @@ void HashMap<T>::print(void)
         }
         std::cout << "empty\n"; 
     }
+    std::cout << "==========================\n" << std::endl;
 }
 
 template <typename T>
 void HashMap<T>::erase(std::string key)
 {
-    uint32_t                        index = this->hash(key) % this->size;
-    std::unique_ptr<Entry<T>>*      current = &this->buckets[index];
+    uint32_t                        index = this->hash(key) % this->_size;
+    std::unique_ptr<Entry<T>>*      current = &this->_buckets[index];
     std::unique_ptr<Entry<T>>*      prev;
 
-    if ((*current)->key == key)
+    if (*current && (*current)->key == key)
     {
-        this->buckets[index] = std::move((*current)->next);
-        (*current).release();
+        this->_buckets[index] = std::move((*current)->next);
         return ;
     }
     while (*current)
@@ -138,7 +174,6 @@ void HashMap<T>::erase(std::string key)
         if ((*current)->key == key)
         {
             (*prev)->next = std::move((*current)->next);
-            (*current).release();
             return ;
         }
         prev = current;
@@ -147,9 +182,50 @@ void HashMap<T>::erase(std::string key)
 }
 
 template <typename T>
+bool HashMap<T>::need_rehash(void)
+{
+    if ((float)this->_stored / (float)this->_size >= 0.75)
+        return true;
+    return false;
+}
+
+template <typename T>
 T &HashMap<T>::operator[](const std::string key)
 {
-    return (this->store(key));
+    Entry<T>* found = this->search(key);
+    
+    if (found)
+        return found->value;
+    if (this->need_rehash())
+        this->rehash();
+    return this->store(key);
+}
+
+template <typename T>
+void HashMap<T>::rehash()
+{
+    std::cout << "rehashing!" << std::endl;
+    int old_size = this->_size;
+    this->_size *= 2;
+
+    std::unique_ptr<std::unique_ptr<Entry<T>>[]> new_tab;
+    new_tab = std::make_unique<std::unique_ptr<Entry<T>>[]>(this->_size * 2);
+    
+    for (int i = 0; i < old_size; i++)
+    {
+        if (this->_buckets[i])
+        {
+            std::unique_ptr<Entry<T>>* current = &this->_buckets[i];
+            while (*current)
+            {
+                std::unique_ptr<Entry<T>> next = std::move((*current)->next);
+                (*current)->next = nullptr;
+                this->move_in_bucket(current, &new_tab[this->hash(current->get()->key)]);
+                *current = std::move(next);
+            }
+        }
+    }
+    this->_buckets = std::move(new_tab);
 }
 
 template <typename T>
