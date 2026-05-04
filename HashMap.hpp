@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HashMap.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kipouliq <kipouliq@student.42.fr>          +#+  +:+       +#+        */
+/*   By: lekix <lekix@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/06 11:19:29 by lekix             #+#    #+#             */
-/*   Updated: 2026/04/17 17:12:53 by kipouliq         ###   ########.fr       */
+/*   Updated: 2026/05/04 16:41:25 by lekix            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,11 +94,6 @@ Entry<T> *HashMap<T>::search(std::string key)
     uint32_t                        index = this->hash(key) % this->_size;
     std::unique_ptr<Entry<T>>*      current = &_buckets[index];
 
-    if (key == "38")
-        std::cout << "////38 index = " << this->hash(key) % this->_size << "and size is " << this->_size << std::endl;
-    if (*current && key == "38")
-        std::cout << "current found\n";
-
     while (*current)
     {
         if ((*current)->key == key)
@@ -129,7 +124,6 @@ T &HashMap<T>::store(std::string key)
 template <typename T>
 void HashMap<T>::move_in_bucket(std::unique_ptr<Entry<T>>* node, std::unique_ptr<Entry<T>>* bucket)
 {
-    // uint32_t index = this->hash(node->get().key) % this->_size;
     Entry<T>* curr = bucket->get();
     if (!curr)
     {
@@ -204,12 +198,11 @@ T &HashMap<T>::operator[](const std::string key)
 template <typename T>
 void HashMap<T>::rehash()
 {
-    std::cout << "rehashing!" << std::endl;
     int old_size = this->_size;
     this->_size *= 2;
 
     std::unique_ptr<std::unique_ptr<Entry<T>>[]> new_tab;
-    new_tab = std::make_unique<std::unique_ptr<Entry<T>>[]>(this->_size * 2);
+    new_tab = std::make_unique<std::unique_ptr<Entry<T>>[]>(this->_size);
     
     for (int i = 0; i < old_size; i++)
     {
@@ -220,7 +213,8 @@ void HashMap<T>::rehash()
             {
                 std::unique_ptr<Entry<T>> next = std::move((*current)->next);
                 (*current)->next = nullptr;
-                this->move_in_bucket(current, &new_tab[this->hash(current->get()->key)]);
+                int new_hash = this->hash(current->get()->key) % this->_size;
+                this->move_in_bucket(current, &new_tab[new_hash]);
                 *current = std::move(next);
             }
         }
